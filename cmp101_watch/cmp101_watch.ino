@@ -1,46 +1,51 @@
-#include <TM1638plus.h>
-#include <Streaming.h>
 #include <DS3231.h>
+#include <Streaming.h>
+#include <Wire.h>
+#include <TM1638plus.h>
+#include <bitset>
 
 #define STROBE_TM D5 // strobe = GPIO connected to strobe line of module
 #define CLOCK_TM D6 // clock = GPIO connected to clock line of module
 #define DIO_TM D7 // data = GPIO connected to data line of module
+
 bool high_freq = false; //default false, If using a high freq CPU > ~100 MHZ set to true.
-// Constructor object (GPIO STB , GPIO CLOCK , GPIO DIO, use high freq MCU)
-TM1638plus tm(STROBE_TM, CLOCK_TM , DIO_TM, high_freq);
 
 DS3231 rtc;
-bool century = false;
 bool h12Flag;
 bool pmFlag;
+TM1638plus tm(STROBE_TM, CLOCK_TM , DIO_TM, high_freq);
 
-void setDateAndTime(){
-  rtc.setClockMode(false); // false = 24hr clock mode
-  rtc.setYear(25);
-  rtc.setMonth(11);
-  rtc.setDate(6);
-  rtc.setHour(12);
-  rtc.setMinute(54);
-  rtc.setSecond(0);
-}
+const uint8_t dpMask = 0b10000000;
+const uint8_t sevenSegDecode[] = {
+  0b00111111,
+  0b00000110,
+  0b01011011,
+  0b01001111,
+  0b01100110,
+  0b01101101,
+  0b01111101,
+  0b00000111,
+  0b01111111,
+  0b01101111
+}; 
 
 void setup() {
-  // put your setup code here, to run once:
   Wire.begin();
   Serial.begin(115200);
-  Serial << (F("\nDS3231 Hi Precision Real Time Clock")) << endl;
-  setDateAndTime(); // Only need to do this once ever.
-  // You should comment this out after you've successfully set the RTC
+  //setDateAndTime();
   tm.displayBegin();
+
+  tm.setLEDs(0);
+
 }
 
 void loop() {
- tm.reset();
- for (int i = 0; i < 255; i++) {
- tm.displayIntNum(i, false);
- delay(100);
- Serial << rtc.getDate() << "/" << rtc.getMonth(century) << "/" << rtc.getYear() << " " ;
- Serial << rtc.getHour(h12Flag, pmFlag) << ":" << rtc.getMinute() << ":" << rtc.getSecond() << endl;
- }
+  tm.display7Seg(2, sevenSegDecode[rtc.getHour(h12Flag, pmFlag) / 10]);
+  tm.display7Seg(3, sevenSegDecode[rtc.getHour(h12Flag, pmFlag) % 10] | dpMask);
+  tm.display7Seg(4, sevenSegDecode[rtc.getMinute() / 10]);
+  tm.display7Seg(5, sevenSegDecode[rtc.getMinute() % 10] | dpMask);
+  tm.display7Seg(6, sevenSegDecode[rtc.getSecond() / 10]);
+  tm.display7Seg(7, sevenSegDecode[rtc.getSecond() % 10]);
+  Serial << rtc.getHour(h12Flag, pmFlag) << ":" << rtc.getMinute() << ":" << rtc.getSecond() << endl;
+  delay(1000);
 }
-
