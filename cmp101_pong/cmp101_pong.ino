@@ -1,10 +1,12 @@
 #include <SPI.h>
+#include <Streaming.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
+#define SCORE_BAR_BOTTOM 8
 
 #define OLED_RESET     -1 
 #define SCREEN_ADDRESS 0x3C // because the screen is 128x32
@@ -13,18 +15,29 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define FRAMERATE 60.0 // the game's target framerate, in frames per second
 #define FRAME_DELTA 1000/FRAMERATE
 
-typedef struct Vector2 {
+struct Vector2 {
   int8_t x;
   int8_t y;
 };
 
 class Ball {
-  int8_t pos;
+  Vector2 pos;
   Vector2 vel;
   public:
 
-  void draw() {
+  Ball(int8_t posX, int8_t posY, int8_t velX, int8_t velY) {
+    pos.x = posX;
+    pos.y = posY;
+    vel.x = velX;
+    vel.y = velY;
+  }
 
+  Vector2 getPos() {
+    return pos;
+  }
+
+  void draw() {
+    display.drawPixel(pos.x, pos.y, SSD1306_WHITE);
   }
 
   void move() {
@@ -46,6 +59,7 @@ class Ball {
 class Paddle {
   bool player;
   Vector2 pos;
+  int8_t score = 0;
   int8_t length = 5;
 
   public:
@@ -57,12 +71,12 @@ class Paddle {
 
   void draw() {
     display.drawLine(pos.x, pos.y, pos.x, pos.y+length-1, SSD1306_WHITE); // without the -1, the paddle would be 6 pixels long
-    display.display();
   }
 
-  void move(int8_t vel) {
-    if (pos.y + vel <= 7) return;
-    pos.y += vel;
+  void move(int8_t newPos) {
+    pos.y = newPos;
+    if (newPos < SCORE_BAR_BOTTOM) pos.y = SCORE_BAR_BOTTOM;
+    if (newPos > SCREEN_HEIGHT - length) pos.y = SCREEN_HEIGHT - length;
   }
 
   Vector2 getPos() {
@@ -72,6 +86,9 @@ class Paddle {
 
 Paddle player(true, 20);
 Paddle cpu(false, 20);
+Ball ball(20, 10, 1, 1);
+int8_t playerScore, cpuScore;
+bool gameOn = true;
 
 void setup() {
   Serial.begin(9600);
@@ -86,13 +103,40 @@ void setup() {
     } 
   }
   player.draw();
+  player.move(analogRead(A0) >> 5);
   cpu.draw();
+  ball.draw();
+  display.display();
+}
+
+void moveThings() {
+  player.move(analogRead(A0) >> 5);
+  ball.move();
+  Vector2 ballPos = ball.getPos();
+  if (ballPos.y == SCREEN_HEIGHT || ballPos.y == SCORE_BAR_BOTTOM) ball.bounce(false);
+}
+
+void displayFrame() {
+  display.clearDisplay();
+  if (gameOn) {
+    player.draw();
+    cpu.draw();
+    ball.draw();
+    display.drawChar(50, 0, playerScore + 0x30, SSD1306_WHITE, SSD1306_BLACK, 1);
+  }
+  else {
+    display.println((playerScore == 10 ? F("player wins") : F("cpu wins")))
+  }
+  display.display();
 }
 
 void loop() {
-  
-  display.clearDisplay();
-  player.draw();
-  cpu.draw();
-  delay(1000);
+  if (gameOn) {
+    moveThings();
+  }
+  displayFrame();
+  gameOn = !(playerScore == 10 || cpuScore == 10);
+  delay(FRAME_DELTA);
 }
+
+
