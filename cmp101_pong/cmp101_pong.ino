@@ -16,7 +16,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define FRAME_DELTA 1000/FRAMERATE
 
 struct Vector2 {
-  int8_t x;
+  int16_t x;
   int8_t y;
 };
 
@@ -123,6 +123,7 @@ void displayFrame() {
     cpu.draw();
     ball.draw();
     display.drawChar(50, 0, playerScore + 0x30, SSD1306_WHITE, SSD1306_BLACK, 1);
+    display.drawChar(SCREEN_WIDTH - 50, 0, playerScore + 0x30, SSD1306_WHITE, SSD1306_BLACK, 1);
   }
   else {
     display.println((playerScore == 10 ? F("player wins") : F("cpu wins")))
