@@ -4,23 +4,26 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+// taken from worksheet
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
-#define SCORE_BAR_BOTTOM 8
+#define SCORE_BAR_BOTTOM 8 // original
 
+// taken from worksheet
 #define OLED_RESET     -1 
 #define SCREEN_ADDRESS 0x3C // because the screen is 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+// original
 #define FRAMERATE 60.0 // the game's target framerate, in frames per second
 #define FRAME_DELTA 1000/FRAMERATE
 
-struct Vector2 {
+struct Vector2 { // original, inspired by unity
   int16_t x;
   int8_t y;
 };
 
-class Ball {
+class Ball { // original
   Vector2 pos;
   Vector2 vel;
   public:
@@ -56,7 +59,7 @@ class Ball {
   }
 };
 
-class Paddle {
+class Paddle { // original
   bool player;
   Vector2 pos;
   int8_t score = 0;
@@ -84,22 +87,23 @@ class Paddle {
   }
 };
 
+// original
 Paddle player(true, 20);
 Paddle cpu(false, 20);
 Ball ball(20, 10, 1, 1);
 int8_t playerScore, cpuScore;
 bool gameOn = true;
 
-void setup() {
-  Serial.begin(9600);
+void setup() { 
+  Serial.begin(9600); // worksheet
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
-    pinMode(LED_BUILTIN, OUTPUT);
     for(;;) { // 30hz blinking led of doom
+              // everything from here down is original
       digitalWrite(LED_BUILTIN, HIGH);
-      delay(1/FRAMERATE * 1000);
+      delay(FRAME_DELTA);
       digitalWrite(LED_BUILTIN, LOW);
-      delay(1/FRAMERATE * 1000);
+      delay(FRAME_DELTA);
     } 
   }
   player.draw();
@@ -126,7 +130,7 @@ void displayFrame() {
     display.drawChar(SCREEN_WIDTH - 50, 0, playerScore + 0x30, SSD1306_WHITE, SSD1306_BLACK, 1);
   }
   else {
-    display.println((playerScore == 10 ? F("player wins") : F("cpu wins")))
+    display.print((playerScore == 10 ? F("player wins") : F("cpu wins")))
   }
   display.display();
 }
